@@ -9,6 +9,8 @@ program odpytuje ten sam endpoint, którego używa strona `Settings →
 Usage` na claude.ai. Jeśli Anthropic zmieni strukturę tej strony,
 program może przestać działać do czasu poprawki.
 
+Ikona pokazuje procent zużycia sesji ze znakiem `%` (np. `7%`).
+
 Kolor cyfry na ikonie:
 - zielony — poniżej 50% zużycia sesji
 - żółty — 50-79%
@@ -73,8 +75,16 @@ procent sesji i tygodnia.
 ## Odświeżanie wygasłego tokena
 
 `sessionKey` nie jest wieczny — wygasa przy wylogowaniu, zmianie
-hasła, albo po prostu z czasem. Gdy tooltip ikony pokaże `Blad: ...`,
-powtórz krok 5 (DevTools) i wklej świeży token do `config.json`.
+hasła, albo po prostu z czasem. Gdy tooltip ikony pokaże
+`Blad 401/403: token wygasl...`, powtórz krok 5 (DevTools) i wklej
+świeży token do `config.json`.
+
+## Częsty błąd: `Expecting value: line 1 column 1 (char 0)`
+
+Oznacza, że claude.ai zwrócił stronę HTML zamiast JSON-a — Cloudflare
+blokuje zapytania bez nagłówka `User-Agent` przeglądarki. Program
+wysyła go od poprawki z sierpnia 2026; jeśli widzisz ten błąd, masz
+starą wersję pliku `usage_tracker.py` / `.pyw`.
 
 ## Autostart z Windows
 
