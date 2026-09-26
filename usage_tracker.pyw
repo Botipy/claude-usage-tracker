@@ -18,7 +18,20 @@ REFRESH_SECONDS = config.get("refresh_seconds", 60)
 
 URL = f"https://claude.ai/api/organizations/{ORG_ID}/usage"
 
+# Bez nagłówków przeglądarki Cloudflare oddaje stronę HTML "Just a moment..."
+# zamiast JSON-a, a wtedy .json() wywala się na "Expecting value: line 1 column 1".
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+    ),
+    "Accept": "application/json",
+    "Accept-Language": "pl-PL,pl;q=0.9,en-US;q=0.8",
+    "Referer": "https://claude.ai/settings/usage",
+}
+
 session = requests.Session()
+session.headers.update(HEADERS)
 session.cookies.set("sessionKey", SESSION_KEY, domain="claude.ai")
 
 current_percent = 0
@@ -29,15 +42,42 @@ def fetch_usage():
     global current_percent, current_tooltip
     try:
         response = session.get(URL, timeout=10)
+
+        if response.status_code in (401, 403):
+            current_tooltip = (
+                f"Blad {response.status_code}: token wygasl lub jest "
+                "odrzucany - wklej swiezy sessionKey do config.json"
+            )
+            return
+        response.raise_for_status()
+
+        if "application/json" not in response.headers.get("content-type", ""):
+            current_tooltip = "Blad: serwer zwrocil strone HTML zamiast danych"
+            return
+
         data = response.json()
 
-        session_percent = data["five_hour"]["utilization"]
-        weekly_percent = data["seven_day"]["utilization"]
+        session_percent = round(data["five_hour"]["utilization"])
+        weekly_percent = round(data["seven_day"]["utilization"])
 
-        current_percent = int(session_percent)
+        current_percent = session_percent
         current_tooltip = f"Sesja: {session_percent}% | Tydzien: {weekly_percent}%"
     except Exception as e:
         current_tooltip = f"Blad: {e}"
+
+
+def fit_font(draw, text, box=248, max_size=240):
+    """Najwiekszy rozmiar czcionki, przy ktorym tekst miesci sie w ikonie."""
+    for size in range(max_size, 23, -4):
+        try:
+            font = ImageFont.truetype("arialbd.ttf", size)
+        except OSError:
+            return ImageFont.load_default(), max(1, size // 70)
+        stroke = max(1, size // 70)
+        bbox = draw.textbbox((0, 0), text, font=font, stroke_width=stroke)
+        if bbox[2] - bbox[0] <= box and bbox[3] - bbox[1] <= box:
+            return font, stroke
+    return ImageFont.load_default(), 2
 
 
 def make_icon(percent):
@@ -51,20 +91,18 @@ def make_icon(percent):
     else:
         color = (231, 76, 60, 255)
 
-    try:
-        font = ImageFont.truetype("arialbd.ttf", 240)
-    except Exception:
-        font = ImageFont.load_default()
+    text = f"{percent}%"
+    font, stroke = fit_font(draw, text)
+    bbox = draw.textbbox((0, 0), text, font=font, stroke_width=stroke)
+    x = (256 - (bbox[2] - bbox[0])) / 2 - bbox[0]
+    y = (256 - (bbox[3] - bbox[1])) / 2 - bbox[1]
 
-    text = str(percent)
-    bbox = draw.textbbox((0, 0), text, font=font)
-    w, h = bbox[2] - bbox[0], bbox[3] - bbox[1]
     draw.text(
-        ((256 - w) / 2, (256 - h) / 2 - bbox[1]),
+        (x, y),
         text,
         fill=color,
         font=font,
-        stroke_width=6,
+        stroke_width=stroke,
         stroke_fill=(0, 0, 0, 255),
     )
 
