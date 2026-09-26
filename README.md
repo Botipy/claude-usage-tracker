@@ -10,7 +10,6 @@ program odpytuje ten sam endpoint, którego używa strona `Settings →
 Usage` na claude.ai. Jeśli Anthropic zmieni strukturę tej strony,
 program może przestać działać do czasu poprawki.
 
-Ikona pokazuje procent zużycia sesji ze znakiem `%` (np. `7%`).
 
 Kolor cyfry na ikonie:
 - zielony — poniżej 50% zużycia sesji
