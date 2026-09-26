@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Claude Usage Tracker
 
 Mała ikona w zasobniku systemowym Windows pokazująca aktualne zużycie
@@ -91,3 +92,6 @@ Program odpali się sam przy starcie Windows, bez widocznego okna.
 - To narzędzie nieoficjalne, oparte o wewnętrzny endpoint, nie
   publiczne, udokumentowane API — może przestać działać bez
   zapowiedzi po stronie Anthropic.
+=======
+# claude-usage-counter
+>>>>>>> a3db21a76e5901282525df12b23b974bd0989c34
