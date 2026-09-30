@@ -91,7 +91,7 @@ def make_icon(percent):
     else:
         color = (231, 76, 60, 255)
 
-    text = f"{percent}%"
+    text = str(percent)
     font, stroke = fit_font(draw, text)
     bbox = draw.textbbox((0, 0), text, font=font, stroke_width=stroke)
     x = (256 - (bbox[2] - bbox[0])) / 2 - bbox[0]
