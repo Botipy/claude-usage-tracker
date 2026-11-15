@@ -1,106 +1,109 @@
-<<<<<<< HEAD
 # Claude Usage Tracker
 
-Mała ikona w zasobniku systemowym Windows pokazująca aktualne zużycie
-limitu Claude (sesja 5-godzinna + limit tygodniowy), pobierana z
-prywatnego endpointu Twojego konta claude.ai.
+A small Windows system tray icon showing your current Claude usage
+limits (5-hour session + weekly limit), fetched from the private
+endpoint of your claude.ai account. Hover over the icon to see the
+percentages and the time each limit resets.
 
-**Uwaga:** to nie jest oficjalne, udokumentowane API Anthropic —
-program odpytuje ten sam endpoint, którego używa strona `Settings →
-Usage` na claude.ai. Jeśli Anthropic zmieni strukturę tej strony,
-program może przestać działać do czasu poprawki.
+**Note:** this is not an official, documented Anthropic API — the
+program queries the same endpoint used by the `Settings → Usage` page
+on claude.ai. If Anthropic changes that page's structure, the program
+may stop working until it is fixed.
 
+Digit color on the icon:
+- green — below 50% session usage
+- yellow — 50-79%
+- red — 80%+
 
-Kolor cyfry na ikonie:
-- zielony — poniżej 50% zużycia sesji
-- żółty — 50-79%
-- czerwony — 80%+
+## Project files
 
-## Pliki w projekcie
+- `usage_tracker.py` / `usage_tracker.pyw` — the program itself (`.pyw`
+  runs without a visible console window, for autostart)
+- `config.example.json` — config template, safe to commit
+- `config.json` — your private config with the token (never commit it,
+  it is in `.gitignore`)
+- `start_tracker.bat` — starts the tracker with one click, without
+  opening PowerShell
+- `requirements.txt` — dependency list
 
-- `usage_tracker.py` / `usage_tracker.pyw` — sam program (`.pyw`
-  odpala się bez widocznego okna konsoli, do autostartu)
-- `config.example.json` — szablon configu, bezpieczny do commitowania
-- `config.json` — Twój prywatny config z tokenem (nigdy nie commituj,
-  jest w `.gitignore`)
-- `start_tracker.bat` — uruchamia tracker jednym kliknięciem, bez
-  otwierania PowerShella
-- `requirements.txt` — lista zależności
+## Installation
 
-## Instalacja
+**1. Install Python** (3.10+), tick "Add Python to PATH" during
+installation: https://python.org/downloads
 
-**1. Zainstaluj Pythona** (3.10+), zaznacz "Add Python to PATH" przy
-instalacji: https://python.org/downloads
-
-**2. Sklonuj/pobierz repo, wejdź do folderu:**
+**2. Clone/download the repo and enter the folder:**
 ```powershell
 git clone https://github.com/Botipy/claude-usage-tracker.git
 cd claude-usage-tracker
 ```
 
-**3. Zainstaluj zależności:**
+**3. Install dependencies:**
 ```powershell
 pip install -r requirements.txt
 ```
 
-**4. Stwórz plik configu:**
+**4. Create the config file:**
 ```powershell
 copy config.example.json config.json
 ```
 
-**5. Zdobądź `sessionKey` i `org_id` z przeglądarki:**
-- Wejdź na claude.ai, zaloguj się
-- Otwórz DevTools (`F12`) → zakładka `Application` (Chrome) / `Storage` (Firefox)
-- `Cookies → https://claude.ai` → znajdź `sessionKey`, skopiuj wartość
-  do `config.json`
-- **`org_id`**: w DevTools, zakładka `Network`, wejdź w `Settings →
-  Usage` na claude.ai, znajdź zapytanie `usage` na liście, sprawdź
-  `Request URL` — fragment między `/organizations/` a `/usage` to
-  Twój `org_id`, wklej go do `config.json`
+**5. Get `sessionKey` and `org_id` from your browser:**
+- Go to claude.ai and log in
+- Open DevTools (`F12`) → `Application` tab (Chrome) / `Storage` (Firefox)
+- `Cookies → https://claude.ai` → find `sessionKey`, copy the value
+  into `config.json`
+- **`org_id`**: in DevTools, open the `Network` tab, go to `Settings →
+  Usage` on claude.ai, find the `usage` request in the list and check
+  its `Request URL` — the part between `/organizations/` and `/usage`
+  is your `org_id`; paste it into `config.json`
 
-**Nigdy nie commituj `config.json`** — zawiera Twój prywatny token
-sesji. Plik jest już w `.gitignore`.
+**Never commit `config.json`** — it contains your private session
+token. The file is already in `.gitignore`.
 
-**6. Odpal:**
+**6. Run:**
 ```powershell
 python usage_tracker.py
 ```
-Albo kliknij dwukrotnie `start_tracker.bat` — odpali się bez okna
-konsoli w tle.
+Or double-click `start_tracker.bat` — it runs in the background
+without a console window.
 
-Ikona pojawi się w zasobniku systemowym (sprawdź też strzałkę
-"ukryte ikony" obok zegara). Najedź myszką, żeby zobaczyć dokładny
-procent sesji i tygodnia.
+The icon appears in the system tray (also check the "hidden icons"
+arrow next to the clock). Hover over it to see the exact session and
+weekly percentages, along with the reset time of each:
 
-## Odświeżanie wygasłego tokena
+```
+Session: 53% (resets 14:30)
+Week: 68% (resets Mon 09:00)
+```
 
-`sessionKey` nie jest wieczny — wygasa przy wylogowaniu, zmianie
-hasła, albo po prostu z czasem. Gdy tooltip ikony pokaże
-`Blad 401/403: token wygasl...`, powtórz krok 5 (DevTools) i wklej
-świeży token do `config.json`.
+Reset times are shown in your local time zone.
 
-## Częsty błąd: `Expecting value: line 1 column 1 (char 0)`
+## Refreshing an expired token
 
-Oznacza, że claude.ai zwrócił stronę HTML zamiast JSON-a — Cloudflare
-blokuje zapytania bez nagłówka `User-Agent` przeglądarki. Program
-wysyła go od poprawki z sierpnia 2026; jeśli widzisz ten błąd, masz
-starą wersję pliku `usage_tracker.py` / `.pyw`.
+`sessionKey` does not last forever — it expires on logout, password
+change, or simply over time. When the icon tooltip shows
+`Error 401/403: token expired...`, repeat step 5 (DevTools) and paste
+a fresh token into `config.json`.
 
-## Autostart z Windows
+## Common error: `Expecting value: line 1 column 1 (char 0)`
+
+It means claude.ai returned an HTML page instead of JSON — Cloudflare
+blocks requests without a browser `User-Agent` header. The program
+sends it since the August 2026 fix; if you see this error, you have an
+old version of `usage_tracker.py` / `.pyw`.
+
+## Autostart with Windows
 
 1. `Win + R` → `shell:startup` → Enter
-2. Stwórz w tym folderze skrót do `start_tracker.bat`
+2. Create a shortcut to `start_tracker.bat` in that folder
 
-Program odpali się sam przy starcie Windows, bez widocznego okna.
+The program will start by itself when Windows starts, with no visible
+window.
 
-## Ryzyko / uwagi
+## Risks / notes
 
-- `sessionKey` daje pełny dostęp do Twojego konta claude.ai jak
-  zwykłe zalogowanie — trzymaj `config.json` tak samo bezpiecznie
-  jak hasło.
-- To narzędzie nieoficjalne, oparte o wewnętrzny endpoint, nie
-  publiczne, udokumentowane API — może przestać działać bez
-  zapowiedzi po stronie Anthropic.
-=======
-# claude-usage-counter
->>>>>>> a3db21a76e5901282525df12b23b974bd0989c34
+- `sessionKey` gives full access to your claude.ai account, just like
+  a regular login — keep `config.json` as safe as a password.
+- This tool is unofficial and relies on an internal endpoint, not a
+  public, documented API — it may stop working without notice on
+  Anthropic's side.

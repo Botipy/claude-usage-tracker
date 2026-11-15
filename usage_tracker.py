@@ -1,6 +1,7 @@
 import json
 import threading
 import time
+from datetime import datetime
 from pathlib import Path
 
 import requests
@@ -18,15 +19,15 @@ REFRESH_SECONDS = config.get("refresh_seconds", 60)
 
 URL = f"https://claude.ai/api/organizations/{ORG_ID}/usage"
 
-# Bez nagłówków przeglądarki Cloudflare oddaje stronę HTML "Just a moment..."
-# zamiast JSON-a, a wtedy .json() wywala się na "Expecting value: line 1 column 1".
+# Without browser headers Cloudflare returns an HTML "Just a moment..." page
+# instead of JSON, and .json() then fails with "Expecting value: line 1 column 1".
 HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
         "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
     ),
     "Accept": "application/json",
-    "Accept-Language": "pl-PL,pl;q=0.9,en-US;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
     "Referer": "https://claude.ai/settings/usage",
 }
 
@@ -35,7 +36,19 @@ session.headers.update(HEADERS)
 session.cookies.set("sessionKey", SESSION_KEY, domain="claude.ai")
 
 current_percent = 0
-current_tooltip = "Ladowanie..."
+current_tooltip = "Loading..."
+
+
+def format_reset(window, with_day):
+    """Local reset time of a usage window, e.g. '14:30' or 'Mon 09:00'."""
+    raw = window.get("resets_at")
+    if not raw:
+        return "unknown"
+    try:
+        dt = datetime.fromisoformat(raw.replace("Z", "+00:00")).astimezone()
+    except ValueError:
+        return "unknown"
+    return dt.strftime("%a %H:%M" if with_day else "%H:%M")
 
 
 def fetch_usage():
@@ -45,14 +58,14 @@ def fetch_usage():
 
         if response.status_code in (401, 403):
             current_tooltip = (
-                f"Blad {response.status_code}: token wygasl lub jest "
-                "odrzucany - wklej swiezy sessionKey do config.json"
+                f"Error {response.status_code}: token expired or rejected "
+                "- paste a fresh sessionKey into config.json"
             )
             return
         response.raise_for_status()
 
         if "application/json" not in response.headers.get("content-type", ""):
-            current_tooltip = "Blad: serwer zwrocil strone HTML zamiast danych"
+            current_tooltip = "Error: server returned an HTML page instead of data"
             return
 
         data = response.json()
@@ -61,13 +74,18 @@ def fetch_usage():
         weekly_percent = round(data["seven_day"]["utilization"])
 
         current_percent = session_percent
-        current_tooltip = f"Sesja: {session_percent}% | Tydzien: {weekly_percent}%"
+        session_reset = format_reset(data["five_hour"], False)
+        weekly_reset = format_reset(data["seven_day"], True)
+        current_tooltip = (
+            f"Session: {session_percent}% (resets {session_reset})\n"
+            f"Week: {weekly_percent}% (resets {weekly_reset})"
+        )
     except Exception as e:
-        current_tooltip = f"Blad: {e}"
+        current_tooltip = f"Error: {e}"
 
 
 def fit_font(draw, text, box=248, max_size=240):
-    """Najwiekszy rozmiar czcionki, przy ktorym tekst miesci sie w ikonie."""
+    """Largest font size at which the text still fits in the icon."""
     for size in range(max_size, 23, -4):
         try:
             font = ImageFont.truetype("arialbd.ttf", size)
@@ -125,7 +143,7 @@ icon = pystray.Icon(
     "claude_usage",
     make_icon(0),
     "Claude Usage",
-    menu=pystray.Menu(pystray.MenuItem("Zamknij", on_quit)),
+    menu=pystray.Menu(pystray.MenuItem("Quit", on_quit)),
 )
 
 threading.Thread(target=update_loop, args=(icon,), daemon=True).start()
